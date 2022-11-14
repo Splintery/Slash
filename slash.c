@@ -13,34 +13,43 @@
 // Pour le moment ce n'est utilisé que pour stocker le chemin courrant
 #define PATH_MAX 64
 // Si jamais on veux changer la taille du prompt
-#define PROMPT_LENGTH 31
+#define PROMPT_LENGTH 46
 
 struct string * prompt_line(int ret, char * path){
+  if(ret<0||ret>99999999){
+    return prompt_line(1,path);
+  }
   struct string* res = string_new(PROMPT_LENGTH);
+  if(ret==0){
+    string_append(res,"\033[32m");
+  }else {
+    string_append(res,"\033[91m");
+  }
   string_append(res,"[");
-  char ret_string[27];
+  char ret_string[10];
   sprintf(ret_string,"%d",ret);
   string_append(res,ret_string);
   string_append(res,"]");
+  string_append(res,"\033[34m");
 
   size_t path_len = strlen(path);
-  if(res->length+path_len>28){
+  if((res->length-10)+path_len>28){
     string_append(res,"...");
     struct string* tmp= string_new(path_len+1);
     string_append(tmp,path);
-    string_truncate_from_the_beginning(tmp,path_len-(28-res->length));
+    string_truncate_from_the_beginning(tmp,path_len-(28-(res->length-10)));
     string_append(res,tmp->data);
     string_delete(tmp);
   }else{
     string_append(res,path);
   }
+  string_append(res,"\033[00m");
   string_append(res,"$ ");
   return res;
 
 }
 //Tests temporaires
 void test() {
-  char *test = "test";
   struct string * ligne = prompt_line(1,test);
   printf("%s\n",ligne->data);
   // J'aime beaucoup ce chemin de fichier
@@ -51,7 +60,7 @@ void test() {
 
 int main(){
   char * error_message = "main";
-  // test();
+  //test();
 
   // On set up des variables pour la suite
   bool exit = false;
@@ -71,7 +80,7 @@ int main(){
 
     // On récupère le répertoire courrant pour le stocker dans "cwd"
     // Je ne sais pas encore comment "cd" affectera le répertoire courrant
-    // Mais si "cd" est bien fait, alors "pwd" n'aura qu'a print le contenu de cwd 
+    // Mais si "cd" est bien fait, alors "pwd" n'aura qu'a print le contenu de cwd
     if (getcwd(cwd, sizeof(cwd)) != NULL) {
       // affichage du prompt
       struct string * prompt = prompt_line(return_value, cwd);
@@ -95,7 +104,7 @@ int main(){
       return_value = 1;
       goto error;
     }
-    
+
     // À changer (pour évaluer les commandes):
     // C'est juste pour pouvoir sortir de la boucle
     if (strstr(user_entry, "exit") != NULL) {
