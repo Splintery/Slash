@@ -122,7 +122,7 @@ int main(){
 
   } while(!exit && read_result > 0);
 
-  return 0;
+  return return_value;
 
   error :
     if (errno) {perror(error_message);}
