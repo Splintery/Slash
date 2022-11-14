@@ -21,13 +21,16 @@ void string_delete(struct string * str){
 // Détruit une chaîne, en libérant la mémoire occupée.
 
 int string_append (struct string * dest, char * src){
-  size_t len = dest->length + strlen(src);
-  if(len < dest->capacity){
-    strcat(dest->data,src);
-    dest->length=len;
+  if (dest -> capacity < strlen(src) + dest -> length + 1) {
+    return 0;
+  } else {
+    for (size_t i = dest -> length; i < dest -> length + strlen(src); i++) {
+      dest -> data[i] = src[i - dest -> length];
+    }
+    dest -> data[dest -> length + strlen(src)] = '\0';
+    dest -> length += strlen(src);
     return 1;
   }
-  return 0;
 }
 // Met à jour dest en ajoutant src à la *fin*.
 // Renvoie 1 en cas de réussite, 0 en cas d'échec.
