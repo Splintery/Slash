@@ -1,7 +1,9 @@
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 #include <errno.h>
+#include <stdio.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 #include <unistd.h>
 // Ce n'est pas nécessaire, mais sympa pour rendre le code plus lisible
 #include <stdbool.h>
@@ -114,18 +116,13 @@ int main(){
 
   // On set up des variables pour la suite
   bool exit = false;
-  int read_result;
   // return_value sera la valeur de retour renvoyé lorsqu'une commande sera executé
   // du style "cd" ou "pwd", (ce qui entre crochet dans le prompt)
   int return_value = 0;
   char cwd[PATH_MAX];
   char memo [WD_MEMORY][PATH_MAX];
-  char * user_entry = malloc(sizeof(char) * MAX_ARGS_STRLEN);
-  if (user_entry == NULL) {
-    error_message = "malloc() for user_entry error";
-    return_value = 1;
-    goto error;
-  }
+  char * user_entry;
+  rl_outstream = stderr;
 
   do {
 
@@ -133,27 +130,23 @@ int main(){
     // Je ne sais pas encore comment "cd" affectera le répertoire courrant
     // Mais si "cd" est bien fait, alors "pwd" n'aura qu'a print le contenu de cwd
     if (getcwd(cwd, sizeof(cwd)) != NULL) {
-      // affichage du prompt
-      struct string * prompt = prompt_line(return_value, cwd);
-      if (write(1, prompt -> data, prompt -> length) < 0) {
+      /*if (write(1, prompt -> data, prompt -> length) < 0) {
         error_message = "prompt_line print error";
         return_value = 1;
         goto error;
       }
+      */
     } else {
       error_message = "getcwd() error";
       return_value = 1;
       goto error;
     }
-
-
-
+    struct string * prompt = prompt_line(return_value, cwd);
     // Pour le moment les commandes sont stockés dans "user_entry"
-    read_result = read(0, user_entry, MAX_ARGS_STRLEN);
-    if (read_result < 0) {
-      error_message = "read() error";
-      return_value = 1;
-      goto error;
+    // on ajoute au buffer user_entry le résultat de readline
+    user_entry = readline(prompt->data);
+    if(strlen(user_entry)>0){
+      add_history(user_entry); // Puis on ajoute la ligne à l'historique des commandes.
     }
 
     // À changer (pour évaluer les commandes):
@@ -165,13 +158,16 @@ int main(){
     }
 
     // TODO : Pour le moment les commandes sont juste recrachées dans le terminal
-    if (write(1, user_entry, read_result) < 0) {
+    if (write(1, user_entry, strlen(user_entry)) < 0) {
       error_message = "write() error";
       return_value = 1;
       goto error;
     }
+    string_delete(prompt);
 
-  } while(!exit && read_result > 0);
+  } while(!exit);
+
+  free(user_entry);
 
   return return_value;
 
