@@ -13,7 +13,7 @@
 // Pour le moment ce n'est utilisé que pour stocker le chemin courrant
 #define PATH_MAX 64
 // Si jamais on veux changer la taille du prompt
-#define PROMPT_LENGTH 46
+#define PROMPT_LENGTH 52
 
 struct string * prompt_line(int ret, char * path){
   if(ret<0||ret>99999999){
@@ -21,35 +21,51 @@ struct string * prompt_line(int ret, char * path){
   }
   struct string* res = string_new(PROMPT_LENGTH);
   if(ret==0){
-    string_append(res,"\033[32m");
+    string_append(res,"\001\033[32m\002[");
   }else {
-    string_append(res,"\033[91m");
+    string_append(res,"\001\033[91m\002[");
   }
-  string_append(res,"[");
   char ret_string[10];
   sprintf(ret_string,"%d",ret);
   string_append(res,ret_string);
-  string_append(res,"]");
-  string_append(res,"\033[34m");
+  string_append(res,"]\001\033[34m\002");
 
   size_t path_len = strlen(path);
-  if((res->length-10)+path_len>28){
+  if((res->length-14)+path_len>28){
     string_append(res,"...");
     struct string* tmp= string_new(path_len+1);
     string_append(tmp,path);
-    string_truncate_from_the_beginning(tmp,path_len-(28-(res->length-10)));
+    string_truncate_from_the_beginning(tmp,path_len-(28-(res->length-14)));
     string_append(res,tmp->data);
     string_delete(tmp);
   }else{
     string_append(res,path);
   }
-  string_append(res,"\033[00m");
-  string_append(res,"$ ");
+  string_append(res,"\001\033[00m\002$ ");
   return res;
 
 }
+
+//Cette fonction affiche le répertoire courant réel si l'option est -P,
+//et affiche le chemin "logique" si l'option est -L.
+int my_pwd(char * cwd, char * pwd, char * option){
+  if(strcmp(option,"-P")==0){
+    //écriture temporaire dans le terminal
+    if(write(1,cwd,strlen(cwd))<0){
+      return 1;
+    }
+    return 0;
+  }else if((strcmp(option,"-L")==0)){
+    if(write(1,pwd,strlen(pwd))<0){
+      return 1;
+    };
+    return 0;
+  }
+    return 1;
+}
 //Tests temporaires
 void test() {
+  char *test = "test";
   struct string * ligne = prompt_line(1,test);
   printf("%s\n",ligne->data);
   // J'aime beaucoup ce chemin de fichier
