@@ -12,6 +12,7 @@
 #define MAX_ARGS_STRLEN 4096
 // Pour le moment ce n'est utilisé que pour stocker le chemin courrant
 #define PATH_MAX 64
+#define WD_MEMORY 50 // Pour stocker les répertoires courants précédents
 // Si jamais on veux changer la taille du prompt
 #define PROMPT_LENGTH 52
 
@@ -63,6 +64,39 @@ int my_pwd(char * cwd, char * pwd, char * option){
   }
     return 1;
 }
+// change le répertoire courant (pas encore complète)
+int my_cd(char * dest, char * option, char memo[WD_MEMORY][PATH_MAX], char cwd[PATH_MAX]){
+    int chd;
+    int i = 0;
+    /*while(memo[i] =! NULL ){
+        i++;
+    }*/
+    if (strcmp(dest, "-") == 0){
+        chd = chdir(memo[i - 1]);
+        if (chd == 0){
+            if(getcwd(cwd, PATH_MAX) == NULL) {
+                return 1;
+            }
+            //memo[i - 1] = NULL;
+            return 0;
+        }
+    }
+    if (strcmp(option, "-L") == 0){
+        chd = chdir(dest);
+        if (chd == 0){
+            if(getcwd(cwd, PATH_MAX) == NULL) {
+                return 1;
+            }
+            //memo[i] = cwd;
+            return 0;
+        } else {
+            return 1;
+        }
+    } if (strcmp(option, "-P") == 0){
+        return 1;
+    }
+    return 1;
+}
 //Tests temporaires
 void test() {
   char *test = "test";
@@ -85,6 +119,7 @@ int main(){
   // du style "cd" ou "pwd", (ce qui entre crochet dans le prompt)
   int return_value = 0;
   char cwd[PATH_MAX];
+  char memo [WD_MEMORY][PATH_MAX];
   char * user_entry = malloc(sizeof(char) * MAX_ARGS_STRLEN);
   if (user_entry == NULL) {
     error_message = "malloc() for user_entry error";
