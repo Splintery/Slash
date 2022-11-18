@@ -9,6 +9,7 @@
 #include <stdbool.h>
 
 #include "mystring.h"
+#include "command.h"
 
 #define MAX_ARGS_NUMBER 4096
 #define MAX_ARGS_STRLEN 4096
@@ -188,6 +189,7 @@ int main(){
     string_delete(prompt);
 
   } while(!exit);
+
 
   free(user_entry);
 
