@@ -53,15 +53,10 @@ struct string * prompt_line(int ret, char * path){
 //et affiche le chemin "logique" si l'option est -L.
 int my_pwd(char * cwd, char * pwd, char * option){
   if(strcmp(option,"-P")==0){
-    //écriture temporaire dans le terminal
-    if(write(1,cwd,strlen(cwd))<0){
-      return 1;
-    }
+    printf("%s\n",cwd);
     return 0;
   }else if((strcmp(option,"-L")==0)){
-    if(write(1,pwd,strlen(pwd))<0){
-      return 1;
-    };
+    printf("%s\n",pwd);
     return 0;
   }
     return 1;
@@ -99,8 +94,31 @@ int my_cd(char * dest, char * option, char memo[WD_MEMORY][PATH_MAX], char cwd[P
     }
     return 1;
 }
+
+char ** command_parser (char * commande){
+  char **res=malloc(MAX_ARGS_NUMBER * sizeof(char *));
+  int clen=strlen(commande);
+  char * tmp = malloc(sizeof(char)*clen);
+  memmove(tmp,commande,sizeof(char)*clen);
+  tmp[clen]='\0';
+  char *strToken = strtok(tmp," ");
+  int i=0;
+
+  while(strToken!= NULL){
+    int len=strlen(strToken);
+    res[i]=malloc(sizeof(char)*(len+1));
+    memmove(res[i],strToken,sizeof(char)*len);
+    res[i][len]='\0';
+    strToken=strtok(NULL, " ");
+    i++;
+  }
+  free(tmp);
+  return res;
+}
+
 //Tests temporaires
 void test() {
+  //test prompt
   char *test = "test";
   struct string * ligne = prompt_line(1,test);
   printf("%s\n",ligne->data);
@@ -108,6 +126,17 @@ void test() {
   char *test2 = "troplong/troptroplong/supermegalong/olalalala";
   struct string * ligne2 = prompt_line(0,test2);
   printf("%s\n",ligne2->data);
+
+  //test command_parser
+  char * commande = "cd a/b/c | pwd | exit";
+  char **commande_parsee=command_parser(commande);
+  int i=0;
+  while(commande_parsee[i]!=NULL){
+  printf("%s\n",commande_parsee[i]);
+  i++;
+}
+
+
 }
 
 int main(){
@@ -129,14 +158,7 @@ int main(){
     // On récupère le répertoire courrant pour le stocker dans "cwd"
     // Je ne sais pas encore comment "cd" affectera le répertoire courrant
     // Mais si "cd" est bien fait, alors "pwd" n'aura qu'a print le contenu de cwd
-    if (getcwd(cwd, sizeof(cwd)) != NULL) {
-      /*if (write(1, prompt -> data, prompt -> length) < 0) {
-        error_message = "prompt_line print error";
-        return_value = 1;
-        goto error;
-      }
-      */
-    } else {
+    if (getcwd(cwd, sizeof(cwd))== NULL) {
       error_message = "getcwd() error";
       return_value = 1;
       goto error;
