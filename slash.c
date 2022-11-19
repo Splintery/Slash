@@ -96,20 +96,21 @@ int my_cd(char * dest, char * option, char memo[WD_MEMORY][PATH_MAX], char cwd[P
     return 1;
 }
 
-char ** command_parser (char * commande){
-  char **res=malloc(MAX_ARGS_NUMBER * sizeof(char *));
+command * command_parser (char * commande){
   int clen=strlen(commande);
   char * tmp = malloc(sizeof(char)*clen);
   memmove(tmp,commande,sizeof(char)*clen);
   tmp[clen]='\0';
   char *strToken = strtok(tmp," ");
+  command *res = command_new(strToken,MAX_ARGS_NUMBER);
+  strToken=strtok(NULL, " ");
   int i=0;
 
   while(strToken!= NULL){
     int len=strlen(strToken);
-    res[i]=malloc(sizeof(char)*(len+1));
-    memmove(res[i],strToken,sizeof(char)*len);
-    res[i][len]='\0';
+    res->args[i]=malloc(sizeof(char)*(len+1));
+    memmove(res->args[i],strToken,sizeof(char)*len);
+    res->args[i][len]='\0';
     strToken=strtok(NULL, " ");
     i++;
   }
@@ -129,11 +130,12 @@ void test() {
   printf("%s\n",ligne2->data);
 
   //test command_parser
-  char * commande = "cd a/b/c | pwd | exit";
-  char **commande_parsee=command_parser(commande);
+  char * commande = "pwd -L";
+  command *commande_parsee=command_parser(commande);
   int i=0;
-  while(commande_parsee[i]!=NULL){
-  printf("%s\n",commande_parsee[i]);
+  printf("name : %s\n",commande_parsee->name);
+  while(commande_parsee->args[i]!=NULL){
+  printf("arg %d : %s\n",i,commande_parsee->args[i]);
   i++;
 }
 
@@ -172,25 +174,30 @@ int main(){
       add_history(user_entry); // Puis on ajoute la ligne à l'historique des commandes.
     }
 
-    // À changer (pour évaluer les commandes):
-    // C'est juste pour pouvoir sortir de la boucle
-    if (strstr(user_entry, "exit") != NULL) {
-      //strstr(user_entry, "exit") check si "exit" est contenu dans user_entry et retourne l'index si c'est le cas, NULL sinon
-      printf("We are exiting !\n");
-      exit = true;
-    }
-
-    // TODO : Pour le moment les commandes sont juste recrachées dans le terminal
-    if (write(1, user_entry, strlen(user_entry)) < 0) {
-      error_message = "write() error";
-      return_value = 1;
-      goto error;
+    command * cmd = command_parser(user_entry);
+    if(strcmp(cmd->name,"exit")==0){
+      exit=true;
+      return_value=0;
+    }else if(strcmp(cmd->name,"pwd")==0){
+      if(cmd->args[0]==NULL||(strcmp(cmd->args[0],"-L")==0)){
+        my_pwd(getenv("PWD"),cwd,"-L");
+      }else{
+        my_pwd(getenv("PWD"),cwd,"-P");
+      }
+    }else if(strcmp(cmd->name,"cd")==0){
+      //TODO implémenter cd
+    }else{
+      // TODO : Pour le moment les commandes sont juste recrachées dans le terminal
+      if (write(1, user_entry, strlen(user_entry)) < 0) {
+        error_message = "write() error";
+        return_value = 1;
+        goto error;
+      }
     }
     string_delete(prompt);
+    command_delete(cmd);
 
   } while(!exit);
-
-
   free(user_entry);
 
   return return_value;

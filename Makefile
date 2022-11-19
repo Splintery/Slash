@@ -14,4 +14,4 @@ command.o: command.c
 	$(CC) $(CCFLAGS) -o command.o -c command.c -lreadline
 
 clean:
-	rm -f slash mystring.o
+	rm -f slash mystring.o command.o
