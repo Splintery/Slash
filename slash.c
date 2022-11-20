@@ -96,28 +96,6 @@ int my_cd(char * dest, char * option, char memo[WD_MEMORY][PATH_MAX], char cwd[P
     return 1;
 }
 
-command * command_parser (char * commande){
-  int clen=strlen(commande);
-  char * tmp = malloc(sizeof(char)*clen);
-  memmove(tmp,commande,sizeof(char)*clen);
-  tmp[clen]='\0';
-  char *strToken = strtok(tmp," ");
-  command *res = command_new(strToken,MAX_ARGS_NUMBER);
-  strToken=strtok(NULL, " ");
-  int i=0;
-
-  while(strToken!= NULL){
-    int len=strlen(strToken);
-    res->args[i]=malloc(sizeof(char)*(len+1));
-    memmove(res->args[i],strToken,sizeof(char)*len);
-    res->args[i][len]='\0';
-    strToken=strtok(NULL, " ");
-    i++;
-  }
-  free(tmp);
-  return res;
-}
-
 //Tests temporaires
 void test() {
   //test prompt
@@ -153,7 +131,6 @@ int main(){
   int return_value = 0;
   char cwd[PATH_MAX];
   char memo [WD_MEMORY][PATH_MAX];
-  char * user_entry;
   rl_outstream = stderr;
 
   do {
@@ -169,7 +146,7 @@ int main(){
     struct string * prompt = prompt_line(return_value, cwd);
     // Pour le moment les commandes sont stockés dans "user_entry"
     // on ajoute au buffer user_entry le résultat de readline
-    user_entry = readline(prompt->data);
+    char * user_entry = readline(prompt->data);
     if(strlen(user_entry)>0){
       add_history(user_entry); // Puis on ajoute la ligne à l'historique des commandes.
     }
@@ -177,33 +154,40 @@ int main(){
     command * cmd = command_parser(user_entry);
     if(strcmp(cmd->name,"exit")==0){
       exit=true;
-      return_value=0;
+      if(cmd->args[0]!=NULL){
+        char test_number[100];
+        int exit_value=atoi(cmd->args[0]);
+        sprintf(test_number,"%d",exit_value);
+        if(strcmp(test_number,cmd->args[0])==0) {
+            return_value=exit_value;
+        } else {
+            return_value=2;
+        }
+      }
     }else if(strcmp(cmd->name,"pwd")==0){
-      if(cmd->args[0]==NULL||(strcmp(cmd->args[0],"-L")==0)){
-        my_pwd(getenv("PWD"),cwd,"-L");
+      if(cmd->args[0]==NULL||strcmp(cmd->args[0],"-L")==0){
+        return_value=my_pwd(getenv("PWD"),cwd,"-L");
       }else{
-        my_pwd(getenv("PWD"),cwd,"-P");
+        return_value=my_pwd(getenv("PWD"),cwd,cmd->args[0]);
+      }
+      if(cmd->args[1]!=NULL){
+        return_value=1;
       }
     }else if(strcmp(cmd->name,"cd")==0){
       //TODO implémenter cd
     }else{
       // TODO : Pour le moment les commandes sont juste recrachées dans le terminal
-      if (write(1, user_entry, strlen(user_entry)) < 0) {
-        error_message = "write() error";
-        return_value = 1;
-        goto error;
-      }
+      printf("%s\n",user_entry);
     }
     string_delete(prompt);
     command_delete(cmd);
+    free(user_entry);
 
   } while(!exit);
-  free(user_entry);
 
   return return_value;
 
   error :
     if (errno) {perror(error_message);}
-    if (user_entry != NULL) {free(user_entry);}
     return return_value;
 }

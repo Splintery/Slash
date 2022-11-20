@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 #include "command.h"
+#define MAX_ARGS_NUMBER 4096
+#define MAX_ARGS_STRLEN 4096
 
 command * command_new(char * str,int max_arg){
 	command * res = malloc(sizeof(command));
@@ -23,6 +25,27 @@ void command_delete(command * cmd) {
 	}
 	free(cmd -> args);
 	free(cmd);
+}
+
+command * command_parser (char * commande){
+  int clen=strlen(commande);
+  char * tmp = malloc(sizeof(char)*clen);
+  memmove(tmp,commande,sizeof(char)*clen);
+  tmp[clen]='\0';
+  char *strToken = strtok(tmp," ");
+  command *res = command_new(strToken,MAX_ARGS_NUMBER);
+  strToken=strtok(NULL," ");
+  int i=0;
+  while(strToken!= NULL){
+    int len=strlen(strToken);
+    res->args[i]=malloc(sizeof(char)*(len+1));
+    memmove(res->args[i],strToken,sizeof(char)*len);
+    res->args[i][len]='\0';
+    strToken=strtok(NULL," ");
+    i++;
+  }
+  free(tmp);
+  return res;
 }
 
 void command_print(command * cmd) {
