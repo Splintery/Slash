@@ -13,17 +13,16 @@ command * command_new(char * str,int max_arg){
 	memmove(res->name,str,sizeof(char)*(len+1));
 	res -> args = malloc(max_arg * sizeof(char*));
 	res -> arg_capacity = max_arg;
+	res -> length = 0;
 	return res;
 }
 
 void command_delete(command * cmd) {
-	int i = 0;
-	while(cmd->args[i]){
-		free(cmd->args[i]);
-		i++;
-	}
-	free(cmd -> args);
 	free(cmd -> name);
+	for(int i = 0; i < cmd->length; i++) {
+			 free(cmd->args[i]);
+	 }
+	free(cmd -> args);
 	free(cmd);
 }
 command * command_parser (char * commande){
@@ -36,11 +35,13 @@ command * command_parser (char * commande){
 	}
   command *res = command_new(strToken,MAX_ARGS_NUMBER);
   int i=0;
-  while(strToken=strtok(NULL,SEPARATOR)){
+  while((strToken=strtok(NULL,SEPARATOR))!=NULL){
+		printf("strtok : %s.\n",strToken);
     int len=strlen(strToken);
     res->args[i]=malloc(sizeof(char)*(len+1));
     memmove(res->args[i],strToken,sizeof(char)*(len+1));
-    i++;
+		i++;
+    res->length=i;
   }
   free(tmp);
   return res;

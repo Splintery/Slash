@@ -127,7 +127,7 @@ int main(){
   // du style "cd" ou "pwd", (ce qui entre crochet dans le prompt)
   int return_value = 0;
   char cwd[PATH_MAX];
-  char memo [WD_MEMORY][PATH_MAX];
+  //char memo [WD_MEMORY][PATH_MAX];
   rl_outstream = stderr;
 
   // On récupère le répertoire courrant pour le stocker dans "cwd"
@@ -148,8 +148,8 @@ int main(){
       add_history(user_entry); // Puis on ajoute la ligne à l'historique des commandes.
     }
 
-    command * cmd = command_parser(user_entry);
-    //command_print(cmd);
+    command *cmd = command_parser(user_entry);
+    command_print(cmd);
     if(strcmp(cmd->name,"exit")==0){
       exit=true;
       if(cmd->args[0]){
@@ -163,12 +163,12 @@ int main(){
         }
       }
     }else if(strcmp(cmd->name,"pwd")==0){
-      if(!(cmd->args[0])||strcmp(cmd->args[0],"-L")==0){
+      if((cmd->args[0])==NULL||strcmp(cmd->args[0],"-L")==0){
         return_value=my_pwd(getenv("PWD"),cwd,"-L");
       }else{
         return_value=my_pwd(getenv("PWD"),cwd,cmd->args[0]);
       }
-      if(!(cmd->args[1])){
+      if(cmd->args[1]){
         return_value=1;
       }
     }else if(strcmp(cmd->name,"cd")==0){
@@ -178,9 +178,10 @@ int main(){
       // TODO : Pour le moment les commandes sont juste recrachées dans le terminal
       printf("%s\n",user_entry);
     }
-    command_delete(cmd);
-    free(user_entry);
+    printf("%d\n",cmd->length);
     string_delete(prompt);
+    free(user_entry);
+    command_delete(cmd);
 
   } while(!exit);
 

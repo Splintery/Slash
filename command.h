@@ -9,6 +9,7 @@ typedef struct command {
 	char * name; // après l'appel à command_parser, name recevra le contenu du premier pointeur de char
 	char ** args; // et args recevra ceux après
 	int arg_capacity;
+	int length;
 } command ;
 // Dans un "switch" plus tard ou pourras donc comparer command->name avec une commande que nous avons
 // Implétmentée puis l'executer avec ce qui se trouve dans args
