@@ -112,14 +112,11 @@ void test() {
   command *commande_parsee=command_parser(commande);
   int i=0;
   printf("name : %s\n",commande_parsee->name);
-  while(commande_parsee->args[i]!=NULL){
-  printf("arg %d : %s\n",i,commande_parsee->args[i]);
-  i++;
+    while(commande_parsee->args[i]!=NULL){
+    printf("arg %d : %s\n",i,commande_parsee->args[i]);
+    i++;
+  }
 }
-
-
-}
-
 int main(){
   char * error_message = "main";
   //test();
@@ -133,16 +130,16 @@ int main(){
   char memo [WD_MEMORY][PATH_MAX];
   rl_outstream = stderr;
 
-  do {
+  // On récupère le répertoire courrant pour le stocker dans "cwd"
+  // Je ne sais pas encore comment "cd" affectera le répertoire courrant
+  // Mais si "cd" est bien fait, alors "pwd" n'aura qu'a print le contenu de cwd
+  if (getcwd(cwd, sizeof(cwd))== NULL) {
+    error_message = "getcwd() error";
+    return_value = 1;
+    goto error;
+  }
 
-    // On récupère le répertoire courrant pour le stocker dans "cwd"
-    // Je ne sais pas encore comment "cd" affectera le répertoire courrant
-    // Mais si "cd" est bien fait, alors "pwd" n'aura qu'a print le contenu de cwd
-    if (getcwd(cwd, sizeof(cwd))== NULL) {
-      error_message = "getcwd() error";
-      return_value = 1;
-      goto error;
-    }
+  do {
     struct string * prompt = prompt_line(return_value, cwd);
     // Pour le moment les commandes sont stockés dans "user_entry"
     // on ajoute au buffer user_entry le résultat de readline
@@ -152,9 +149,10 @@ int main(){
     }
 
     command * cmd = command_parser(user_entry);
+    //command_print(cmd);
     if(strcmp(cmd->name,"exit")==0){
       exit=true;
-      if(cmd->args[0]!=NULL){
+      if(cmd->args[0]){
         char test_number[100];
         int exit_value=atoi(cmd->args[0]);
         sprintf(test_number,"%d",exit_value);
@@ -165,23 +163,24 @@ int main(){
         }
       }
     }else if(strcmp(cmd->name,"pwd")==0){
-      if(cmd->args[0]==NULL||strcmp(cmd->args[0],"-L")==0){
+      if(!(cmd->args[0])||strcmp(cmd->args[0],"-L")==0){
         return_value=my_pwd(getenv("PWD"),cwd,"-L");
       }else{
         return_value=my_pwd(getenv("PWD"),cwd,cmd->args[0]);
       }
-      if(cmd->args[1]!=NULL){
+      if(!(cmd->args[1])){
         return_value=1;
       }
     }else if(strcmp(cmd->name,"cd")==0){
       //TODO implémenter cd
+      printf("%s\n",user_entry);
     }else{
       // TODO : Pour le moment les commandes sont juste recrachées dans le terminal
       printf("%s\n",user_entry);
     }
-    string_delete(prompt);
     command_delete(cmd);
     free(user_entry);
+    string_delete(prompt);
 
   } while(!exit);
 

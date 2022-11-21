@@ -21,16 +21,12 @@ void string_delete(struct string * str){
 // Détruit une chaîne, en libérant la mémoire occupée.
 
 int string_append (struct string * dest, char * src){
-  if (dest -> capacity < strlen(src) + dest -> length + 1) {
-    return 0;
-  } else {
-    for (size_t i = dest -> length; i < dest -> length + strlen(src); i++) {
-      dest -> data[i] = src[i - dest -> length];
-    }
-    dest -> data[dest -> length + strlen(src)] = '\0';
-    dest -> length += strlen(src);
-    return 1;
-  }
+  size_t src_len = strlen(src);
+  if (dest->length + src_len + 1 > dest->capacity) return 0;
+  memmove(dest->data+dest->length, src, src_len+1);
+  dest->length += src_len;
+  return 1;
+
 }
 // Met à jour dest en ajoutant src à la *fin*.
 // Renvoie 1 en cas de réussite, 0 en cas d'échec.
@@ -55,8 +51,7 @@ void string_truncate_from_the_beginning (struct string * str, size_t nchars){
     str->length=0;
   }else{
     size_t len =str->length - nchars;
-    memmove(str->data,&str->data[nchars],len);
-    str->data[len]='\0';
+    memmove(str->data,&(str->data[nchars]),len+1);
     str->length=len;
   }
 }
