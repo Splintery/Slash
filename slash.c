@@ -149,10 +149,9 @@ int main(){
     }
 
     command *cmd = command_parser(user_entry);
-    command_print(cmd);
     if(strcmp(cmd->name,"exit")==0){
       exit=true;
-      if(cmd->args[0]){
+      if(cmd->length==1){
         char test_number[100];
         int exit_value=atoi(cmd->args[0]);
         sprintf(test_number,"%d",exit_value);
@@ -161,14 +160,16 @@ int main(){
         } else {
             return_value=2;
         }
+      }else if(cmd->length>1){
+        return_value=2;
       }
     }else if(strcmp(cmd->name,"pwd")==0){
-      if((cmd->args[0])==NULL||strcmp(cmd->args[0],"-L")==0){
+      if((cmd->length==0)||strcmp(cmd->args[0],"-L")==0){
         return_value=my_pwd(getenv("PWD"),cwd,"-L");
       }else{
         return_value=my_pwd(getenv("PWD"),cwd,cmd->args[0]);
       }
-      if(cmd->args[1]){
+      if(cmd->length>1){
         return_value=1;
       }
     }else if(strcmp(cmd->name,"cd")==0){
@@ -178,7 +179,6 @@ int main(){
       // TODO : Pour le moment les commandes sont juste recrachées dans le terminal
       printf("%s\n",user_entry);
     }
-    printf("%d\n",cmd->length);
     string_delete(prompt);
     free(user_entry);
     command_delete(cmd);

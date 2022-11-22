@@ -36,7 +36,6 @@ command * command_parser (char * commande){
   command *res = command_new(strToken,MAX_ARGS_NUMBER);
   int i=0;
   while((strToken=strtok(NULL,SEPARATOR))!=NULL){
-		printf("strtok : %s.\n",strToken);
     int len=strlen(strToken);
     res->args[i]=malloc(sizeof(char)*(len+1));
     memmove(res->args[i],strToken,sizeof(char)*(len+1));
@@ -49,7 +48,7 @@ command * command_parser (char * commande){
 
 void command_print(command * cmd) {
 	printf("Command name : %s\n", cmd -> name);
-	for (int i = 0; i < 5; i++) { // temporaire pour que les tests soient lisibles
+	for (int i = 0; i < cmd->length; i++) { // temporaire pour que les tests soient lisibles
 		printf("\tArgument[%d] = %s\n", i, cmd -> args[i]);
 	}
 }
