@@ -63,29 +63,26 @@ int my_pwd(char * cwd, char * pwd, char * option){
     return 1;
 }
 // change le répertoire courant (pas encore complète)
-int my_cd(char * dest, char * option, char memo[WD_MEMORY][PATH_MAX], char cwd[PATH_MAX]){
+int my_cd(char * dest, char * option, char prev[PATH_MAX], char cwd[PATH_MAX]){
     int chd;
-    int i = 0;
-    /*while(memo[i] =! NULL ){
-        i++;
-    }*/
     if (strcmp(dest, "-") == 0){
-        chd = chdir(memo[i - 1]);
+        chd = chdir(prev);
         if (chd == 0){
             if(getcwd(cwd, PATH_MAX) == NULL) {
                 return 1;
             }
-            //memo[i - 1] = NULL;
             return 0;
         }
     }
     if (strcmp(option, "-L") == 0){
+        if (getcwd(prev, PATH_MAX) == NULL){
+            return 1;
+        }
         chd = chdir(dest);
         if (chd == 0){
             if(getcwd(cwd, PATH_MAX) == NULL) {
                 return 1;
             }
-            //memo[i] = cwd;
             return 0;
         } else {
             return 1;
@@ -127,7 +124,7 @@ int main(){
   // du style "cd" ou "pwd", (ce qui entre crochet dans le prompt)
   int return_value = 0;
   char cwd[PATH_MAX];
-  //char memo [WD_MEMORY][PATH_MAX];
+  char previouswd[PATH_MAX]; //pour stocker le répertoire de travail précédent
   rl_outstream = stderr;
 
   // On récupère le répertoire courrant pour le stocker dans "cwd"
@@ -174,6 +171,18 @@ int main(){
       }
     }else if(strcmp(cmd->name,"cd")==0){
       //TODO implémenter cd
+      if (cmd->length == 0){
+          return_value = 1; //à voir si on doit faire en sorte comme cd de base de faire revenir à ~
+      }
+      if (cmd->length == 1){
+          if (strcmp(cmd->args[0], "-") == 0){
+              return_value = my_cd("-", "-L", previouswd, cwd);
+          } else {
+              return_value = my_cd(cmd->args[0], "-L", previouswd, cwd);
+          }
+      } else {
+          return_value = 1;
+      }
       printf("%s\n",user_entry);
     }else{
       // TODO : Pour le moment les commandes sont juste recrachées dans le terminal
