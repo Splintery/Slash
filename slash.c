@@ -65,20 +65,15 @@ int my_pwd(char * cwd, char * pwd, char * option){
 // change le répertoire courant (pas encore complète)
 int my_cd(char * dest, char * option, char prev[PATH_MAX], char cwd[PATH_MAX]){
     int chd;
-    if (strcmp(dest, "-") == 0){
-        chd = chdir(prev);
-        if (chd == 0){
-            if(getcwd(cwd, PATH_MAX) == NULL) {
-                return 1;
-            }
-            return 0;
-        }
+    if (getcwd(prev, PATH_MAX) == NULL){
+        return 1;
     }
     if (strcmp(option, "-L") == 0){
-        if (getcwd(prev, PATH_MAX) == NULL){
-            return 1;
+        if (strcmp(dest, "-") == 0){
+          chd = chdir(prev);
+        }else{
+          chd = chdir(dest);
         }
-        chd = chdir(dest);
         if (chd == 0){
             if(getcwd(cwd, PATH_MAX) == NULL) {
                 return 1;
@@ -88,7 +83,20 @@ int my_cd(char * dest, char * option, char prev[PATH_MAX], char cwd[PATH_MAX]){
             return 1;
         }
     } if (strcmp(option, "-P") == 0){
-        return 1;
+        setenv("PWD",cwd,1);
+      if (strcmp(dest, "-") == 0){
+        chd=chdir(prev);
+      }else{
+        chd = chdir(dest);
+      }
+      if (chd == 0){
+          if(getcwd(cwd, PATH_MAX) == NULL) {
+              return 1;
+          }
+          return 0;
+      } else {
+          return 1;
+      }
     }
     return 1;
 }
@@ -162,28 +170,21 @@ int main(){
       }
     }else if(strcmp(cmd->name,"pwd")==0){
       if((cmd->length==0)||strcmp(cmd->args[0],"-L")==0){
-        return_value=my_pwd(getenv("PWD"),cwd,"-L");
+        return_value=my_pwd(cwd,getenv("PWD"),"-L");
       }else{
-        return_value=my_pwd(getenv("PWD"),cwd,cmd->args[0]);
+        return_value=my_pwd(cwd,getenv("PWD"),cmd->args[0]);
       }
       if(cmd->length>1){
         return_value=1;
       }
     }else if(strcmp(cmd->name,"cd")==0){
       //TODO implémenter cd
-      if (cmd->length == 0){
-          return_value = 1; //à voir si on doit faire en sorte comme cd de base de faire revenir à ~
+      switch(cmd->length){
+        case 0 : return_value = my_cd(getenv("HOME"),"-L",previouswd,cwd);  break;
+        case 1 : return_value = my_cd(cmd->args[0], "-L", previouswd, cwd); break;
+        case 2 : return_value = my_cd(cmd->args[1], cmd->args[0], previouswd, cwd); break;
+        default : return_value = 1;
       }
-      if (cmd->length == 1){
-          if (strcmp(cmd->args[0], "-") == 0){
-              return_value = my_cd("-", "-L", previouswd, cwd);
-          } else {
-              return_value = my_cd(cmd->args[0], "-L", previouswd, cwd);
-          }
-      } else {
-          return_value = 1;
-      }
-      printf("%s\n",user_entry);
     }else{
       // TODO : Pour le moment les commandes sont juste recrachées dans le terminal
       printf("%s\n",user_entry);

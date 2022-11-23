@@ -1,6 +1,6 @@
 
 CC ?= gcc
-CCFLAGS ?= -Wall -pedantic -g -Wextra -std=c99
+CCFLAGS ?= -Wall -pedantic -g -Wextra -D_XOPEN_SOURCE=700 -std=c99
 
 all: slash
 
