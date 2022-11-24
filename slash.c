@@ -140,6 +140,7 @@ int my_cd(char * dest, char * option, char cwd[PATH_MAX]){
           memmove(&chemin[lenPwd+1],dest,sizeof(char)*(lenDest+1));
           bool invalidPath=simplifyPath(chemin);
           if(invalidPath){
+            free(chemin);
             return my_cd(dest,"-P",cwd);
           }
           if(strlen(chemin)==0){
@@ -150,12 +151,21 @@ int my_cd(char * dest, char * option, char cwd[PATH_MAX]){
         }
         if (chd == 0){
             if(getcwd(cwd, PATH_MAX) == NULL) {
+              if(strcmp(dest, "-")!=0){
+                free(chemin);
+              }
                 return 1;
             }
             setenv("PWD",chemin,1);
+            if(strcmp(dest, "-")!=0){
+              free(chemin);
+            }
             return 0;
         } else {
-            return my_cd(dest,"-P",cwd);
+          if(strcmp(dest, "-")!=0){
+            free(chemin);
+          }
+          return my_cd(dest,"-P",cwd);
         }
     } if (strcmp(option, "-P") == 0){
       if (strcmp(dest, "-") == 0){
@@ -205,7 +215,7 @@ int main(){
   //test();
 
   // On set up des variables pour la suite
-  bool exit = false;
+  bool exitB = false;
   // return_value sera la valeur de retour renvoyé lorsqu'une commande sera executé
   // du style "cd" ou "pwd", (ce qui entre crochet dans le prompt)
   int return_value = 0;
@@ -225,16 +235,16 @@ int main(){
     // Pour le moment les commandes sont stockés dans "user_entry"
     // on ajoute au buffer user_entry le résultat de readline
     char * user_entry = readline(prompt->data);
+    if(user_entry==NULL){
+      exit(0);
+    }
     if(strlen(user_entry)>0){
       add_history(user_entry); // Puis on ajoute la ligne à l'historique des commandes.
-    }else{
-      exit=true;
-      break;
     }
 
     command *cmd = command_parser(user_entry);
     if(strcmp(cmd->name,"exit")==0){
-      exit=true;
+      exitB=true;
       if(cmd->length==1){
         char test_number[100];
         int exit_value=atoi(cmd->args[0]);
@@ -272,7 +282,7 @@ int main(){
     free(user_entry);
     command_delete(cmd);
 
-  } while(!exit);
+  } while(!exitB);
   return return_value;
 
   error :
