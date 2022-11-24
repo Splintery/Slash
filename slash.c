@@ -65,49 +65,97 @@ int my_pwd(char * cwd, char * pwd, char * option){
 
 
 
-char** parsePath(char *path){
+bool simplifyPath(char *path){
   int clen=strlen(path);
   char * tmp = malloc(sizeof(char)*(clen+1));
   memmove(tmp,path,sizeof(char)*(clen+1));
   char **pathParse = malloc(sizeof(char*)*MAX_ARGS_NUMBER);
 
   char *strToken = strtok(tmp,"/");
+    int i=0;
 	if(strToken==NULL){
-		strToken="";
-	}
-
-  int i=0;
+		path[0]='\0';
+    return false;
+	}else{
+    pathParse[i]=malloc(sizeof(char)*(strlen(strToken)+1));
+    memmove(pathParse[i],strToken,sizeof(char)*(strlen(strToken)+1));
+    i++;
+  }
+  bool unvalid = false;
   while((strToken=strtok(NULL,"/"))!=NULL){
     int len=strlen(strToken);
-    pathParse[i]=malloc(sizeof(char)*(len+1));
-    memmove(pathParse[i],strToken,sizeof(char)*(len+1));
-		i++;
+    if(strcmp(strToken,"..")==0){
+      if(i>0){
+        i--;
+        free(pathParse[i]);
+      }else{
+        unvalid=true;
+      }
+    }else if(strcmp(strToken,".")!=0){
+      pathParse[i]=malloc(sizeof(char)*(len+1));
+      memmove(pathParse[i],strToken,sizeof(char)*(len+1));
+  		i++;
+    }
   }
+  if(!unvalid){
+    if(i==0){
+      path[0]='\0';
+    }else{
+      path[0]='/';
+      memmove(&path[1],pathParse[0],(strlen(pathParse[0])+1)*sizeof(char));
+      for(int j=1;j<i;j++){
+        int len = strlen(path);
+        path[len]='/';
+        memmove(&path[len+1],pathParse[j],(strlen(pathParse[j])+1)*sizeof(char));
+      }
+    }
+  }
+  for(int k=0;k<i;k++){
+    free(pathParse[k]);
+  }
+  free(pathParse);
   free(tmp);
-  return pathParse;
-
+  return unvalid;
 }
 
 // change le répertoire courant (pas encore complète)
 int my_cd(char * dest, char * option, char prev[PATH_MAX], char cwd[PATH_MAX]){
+
     int chd;
     if (strcmp(option, "-L") == 0){
+        char *chemin;
         if (strcmp(dest, "-") == 0){
+          chemin = prev;
           chd = chdir(prev);
         }else{
           if (getcwd(prev, PATH_MAX) == NULL){
               return 1;
           }
-          chd = chdir(dest);
+          char *pwd=getenv("PWD");
+          int lenPwd=strlen(pwd);
+          int lenDest=strlen(dest);
+          chemin=malloc(sizeof(char)*(lenPwd+lenDest+2));
+          memmove(chemin,pwd,sizeof(char)*lenPwd);
+          chemin[lenPwd]='/';
+          memmove(&chemin[lenPwd+1],dest,sizeof(char)*(lenDest+1));
+          bool invalidPath=simplifyPath(chemin);
+          if(invalidPath){
+            return my_cd(dest,"-P",prev,cwd);
+          }
+          if(strlen(chemin)==0){
+            chd = chdir(getenv("HOME"));
+          }else{
+            chd = chdir(chemin);
+          }
         }
         if (chd == 0){
             if(getcwd(cwd, PATH_MAX) == NULL) {
                 return 1;
             }
-            setenv("PWD",cwd,1);
+            setenv("PWD",chemin,1);
             return 0;
         } else {
-            return 1;
+            return my_cd(dest,"-P",prev,cwd);
         }
     } if (strcmp(option, "-P") == 0){
       if (strcmp(dest, "-") == 0){
