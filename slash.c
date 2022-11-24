@@ -119,18 +119,18 @@ bool simplifyPath(char *path){
 }
 
 // change le répertoire courant (pas encore complète)
-int my_cd(char * dest, char * option, char prev[PATH_MAX], char cwd[PATH_MAX]){
+int my_cd(char * dest, char * option, char cwd[PATH_MAX]){
 
     int chd;
     if (strcmp(option, "-L") == 0){
         char *chemin;
         if (strcmp(dest, "-") == 0){
-          chemin = prev;
-          chd = chdir(prev);
+          chemin = getenv("OLDPWD");
+          setenv("OLDPWD",getenv("PWD"),1);
+          chd = chdir(chemin);
+
         }else{
-          if (getcwd(prev, PATH_MAX) == NULL){
-              return 1;
-          }
+          setenv("OLDPWD",getenv("PWD"),1);
           char *pwd=getenv("PWD");
           int lenPwd=strlen(pwd);
           int lenDest=strlen(dest);
@@ -140,7 +140,7 @@ int my_cd(char * dest, char * option, char prev[PATH_MAX], char cwd[PATH_MAX]){
           memmove(&chemin[lenPwd+1],dest,sizeof(char)*(lenDest+1));
           bool invalidPath=simplifyPath(chemin);
           if(invalidPath){
-            return my_cd(dest,"-P",prev,cwd);
+            return my_cd(dest,"-P",cwd);
           }
           if(strlen(chemin)==0){
             chd = chdir(getenv("HOME"));
@@ -155,15 +155,15 @@ int my_cd(char * dest, char * option, char prev[PATH_MAX], char cwd[PATH_MAX]){
             setenv("PWD",chemin,1);
             return 0;
         } else {
-            return my_cd(dest,"-P",prev,cwd);
+            return my_cd(dest,"-P",cwd);
         }
     } if (strcmp(option, "-P") == 0){
       if (strcmp(dest, "-") == 0){
-        chd=chdir(prev);
+
+        chd=chdir(getenv("OLDPWD"));
+        setenv("OLDPWD",getenv("PWD"),1);
       }else{
-        if (getcwd(prev, PATH_MAX) == NULL){
-            return 1;
-        }
+        setenv("OLDPWD",getenv("PWD"),1);
         chd = chdir(dest);
       }
       if (chd == 0){
@@ -210,7 +210,6 @@ int main(){
   // du style "cd" ou "pwd", (ce qui entre crochet dans le prompt)
   int return_value = 0;
   char cwd[PATH_MAX];
-  char previouswd[PATH_MAX]; //pour stocker le répertoire de travail précédent
   rl_outstream = stderr;
 
   // On récupère le répertoire courrant pour le stocker dans "cwd"
@@ -228,6 +227,9 @@ int main(){
     char * user_entry = readline(prompt->data);
     if(strlen(user_entry)>0){
       add_history(user_entry); // Puis on ajoute la ligne à l'historique des commandes.
+    }else{
+      exit=true;
+      break;
     }
 
     command *cmd = command_parser(user_entry);
@@ -257,9 +259,9 @@ int main(){
     }else if(strcmp(cmd->name,"cd")==0){
       //TODO implémenter cd
       switch(cmd->length){
-        case 0 : return_value = my_cd(getenv("HOME"),"-L",previouswd,cwd);  break;
-        case 1 : return_value = my_cd(cmd->args[0], "-L", previouswd, cwd); break;
-        case 2 : return_value = my_cd(cmd->args[1], cmd->args[0], previouswd, cwd); break;
+        case 0 : return_value = my_cd(getenv("HOME"),"-L",cwd);  break;
+        case 1 : return_value = my_cd(cmd->args[0], "-L", cwd); break;
+        case 2 : return_value = my_cd(cmd->args[1], cmd->args[0], cwd); break;
         default : return_value = 1;
       }
     }else{
@@ -271,7 +273,6 @@ int main(){
     command_delete(cmd);
 
   } while(!exit);
-
   return return_value;
 
   error :
