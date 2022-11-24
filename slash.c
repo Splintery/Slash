@@ -62,37 +62,67 @@ int my_pwd(char * cwd, char * pwd, char * option){
   }
     return 1;
 }
+
+
+
+char** parsePath(char *path){
+  int clen=strlen(path);
+  char * tmp = malloc(sizeof(char)*(clen+1));
+  memmove(tmp,path,sizeof(char)*(clen+1));
+  char **pathParse = malloc(sizeof(char*)*MAX_ARGS_NUMBER);
+
+  char *strToken = strtok(tmp,"/");
+	if(strToken==NULL){
+		strToken="";
+	}
+
+  int i=0;
+  while((strToken=strtok(NULL,"/"))!=NULL){
+    int len=strlen(strToken);
+    pathParse[i]=malloc(sizeof(char)*(len+1));
+    memmove(pathParse[i],strToken,sizeof(char)*(len+1));
+		i++;
+  }
+  free(tmp);
+  return pathParse;
+
+}
+
 // change le répertoire courant (pas encore complète)
 int my_cd(char * dest, char * option, char prev[PATH_MAX], char cwd[PATH_MAX]){
     int chd;
-    if (getcwd(prev, PATH_MAX) == NULL){
-        return 1;
-    }
     if (strcmp(option, "-L") == 0){
         if (strcmp(dest, "-") == 0){
           chd = chdir(prev);
         }else{
+          if (getcwd(prev, PATH_MAX) == NULL){
+              return 1;
+          }
           chd = chdir(dest);
         }
         if (chd == 0){
             if(getcwd(cwd, PATH_MAX) == NULL) {
                 return 1;
             }
+            setenv("PWD",cwd,1);
             return 0;
         } else {
             return 1;
         }
     } if (strcmp(option, "-P") == 0){
-        setenv("PWD",cwd,1);
       if (strcmp(dest, "-") == 0){
         chd=chdir(prev);
       }else{
+        if (getcwd(prev, PATH_MAX) == NULL){
+            return 1;
+        }
         chd = chdir(dest);
       }
       if (chd == 0){
           if(getcwd(cwd, PATH_MAX) == NULL) {
               return 1;
           }
+          setenv("PWD",cwd,1);
           return 0;
       } else {
           return 1;
@@ -143,9 +173,8 @@ int main(){
     return_value = 1;
     goto error;
   }
-
   do {
-    struct string * prompt = prompt_line(return_value, cwd);
+    struct string * prompt = prompt_line(return_value, getenv("PWD"));
     // Pour le moment les commandes sont stockés dans "user_entry"
     // on ajoute au buffer user_entry le résultat de readline
     char * user_entry = readline(prompt->data);
