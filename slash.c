@@ -73,13 +73,10 @@ bool simplifyPath(char *path){
 
   char *strToken = strtok(tmp,"/");
     int i=0;
-	if(strToken==NULL){
-		path[0]='\0';
-    return false;
-	}else{
-    pathParse[i]=malloc(sizeof(char)*(strlen(strToken)+1));
-    memmove(pathParse[i],strToken,sizeof(char)*(strlen(strToken)+1));
-    i++;
+	if(strToken!=NULL){
+		  pathParse[i]=malloc(sizeof(char)*(strlen(strToken)+1));
+      memmove(pathParse[i],strToken,sizeof(char)*(strlen(strToken)+1));
+      i++;
   }
   bool unvalid = false;
   while((strToken=strtok(NULL,"/"))!=NULL){
@@ -132,12 +129,17 @@ int my_cd(char * dest, char * option, char cwd[PATH_MAX]){
         }else{
           setenv("OLDPWD",getenv("PWD"),1);
           char *pwd=getenv("PWD");
-          int lenPwd=strlen(pwd);
           int lenDest=strlen(dest);
-          chemin=malloc(sizeof(char)*(lenPwd+lenDest+2));
-          memmove(chemin,pwd,sizeof(char)*lenPwd);
-          chemin[lenPwd]='/';
-          memmove(&chemin[lenPwd+1],dest,sizeof(char)*(lenDest+1));
+          if(dest[0]!='/'){
+            int lenPwd=strlen(pwd);
+            chemin=malloc(sizeof(char)*(lenPwd+lenDest+2));
+            memmove(chemin,pwd,sizeof(char)*lenPwd);
+            chemin[lenPwd]='/';
+            memmove(&chemin[lenPwd+1],dest,sizeof(char)*(lenDest+1));
+          }else{
+            chemin=malloc(sizeof(char)*(lenDest+1));
+            memmove(chemin,dest,sizeof(char)*(lenDest+1));
+          }
           bool invalidPath=simplifyPath(chemin);
           if(invalidPath){
             free(chemin);
@@ -174,6 +176,7 @@ int my_cd(char * dest, char * option, char cwd[PATH_MAX]){
         setenv("OLDPWD",getenv("PWD"),1);
       }else{
         setenv("OLDPWD",getenv("PWD"),1);
+
         chd = chdir(dest);
       }
       if (chd == 0){
