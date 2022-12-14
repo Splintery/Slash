@@ -52,3 +52,40 @@ void command_print(command * cmd) {
 		printf("\tArgument[%d] = %s\n", i, cmd -> args[i]);
 	}
 }
+
+commandList *init_list(){ //crée une liste avec la commande nulle en premier élément (peut-être à modifier par la suite)
+    commandList *l = malloc(sizeof(commandList));
+    if (l == NULL){
+        return NULL;
+    } else {
+        l->cmd = *(command_new("", 0));
+        l->suivant = NULL;
+        return l;
+    }
+}
+
+commandList *addToList(commandList *l,command cmd){ // Pour ajouter une commande à notre liste
+    while (l->suivant != NULL){
+        l = l->suivant;
+    }
+    commandList *new = malloc(sizeof(commandList));
+    if (new == NULL){
+        return NULL;
+    } else {
+        new->cmd = cmd;
+        new->suivant = NULL;
+        l->suivant = new;
+        return l;
+    }
+}
+
+void freeList(commandList *l){ //Pour détruire notre liste après coup
+    while (l != NULL){
+        commandList *suivant = l->suivant;
+        free(&(l->cmd));
+        free(l);
+        l = suivant;
+    }
+}
+
+

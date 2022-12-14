@@ -14,6 +14,11 @@ typedef struct command {
 // Dans un "switch" plus tard ou pourras donc comparer command->name avec une commande que nous avons
 // Implétmentée puis l'executer avec ce qui se trouve dans args
 
+typedef struct commandList { // Pour implémenter le 1er wildcard et permettre l'exécution de toutes les commandes possibles
+    command cmd;
+    struct commandList *suivant; // NULL si plus de commande à tenter d'exécuter
+} commandList;
+
 command * command_new(char *str,int max_arg);
 
 void command_delete(command * cmd);
@@ -23,5 +28,11 @@ command * command_parser (char * commande);
 // crée une struct command à partir d'une chaine de caractères.
 
 void command_print(command * cmd);
+
+commandList *init_list();
+
+commandList *addToList(commandList *l,command cmd);
+
+void freeList(commandList *l);
 
 #endif
