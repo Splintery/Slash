@@ -42,6 +42,7 @@ command * command_parser (char * commande){
 		i++;
     res->length=i;
   }
+  res -> args[res -> length + 1] = (char *) NULL;
   free(tmp);
   return res;
 }
