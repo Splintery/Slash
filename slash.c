@@ -267,7 +267,7 @@ int main(){
     // on ajoute au buffer user_entry le résultat de readline
     char * user_entry = readline(prompt->data);
     if(user_entry==NULL){
-      exit(0);
+      exit(return_value);
     }
     if(strlen(user_entry)>0){
       add_history(user_entry); // Puis on ajoute la ligne à l'historique des commandes.
@@ -324,11 +324,15 @@ int main(){
         _exit(1);
       } else {
         int status;
-        waitpid(fork_value,&status, 0);
-        if(status==256){
-          return_value=1;
+        if (waitpid(fork_value,&status, WUNTRACED | WCONTINUED) == -1) {
+          perror("waitpid");
+          return_value = 1;
         } else {
-          return_value = 0;
+          if (WIFEXITED(status)) {
+            return_value = WEXITSTATUS(status);
+          } else {
+            return_value = WSTOPSIG(status);
+          }
         }
       }
     } else {
@@ -340,9 +344,9 @@ int main(){
     command_delete(cmd);
 
   } while(!exitB);
-  return return_value;
+  exit(return_value);
 
   error :
     if (errno) {perror(error_message);}
-    return return_value;
+    exit(return_value);
 }
