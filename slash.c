@@ -275,6 +275,7 @@ int main(){
 
     command *cmd = command_parser(user_entry);
     if(strcmp(cmd->name,"exit")==0){
+
       exitB=true;
       if(cmd->length==1){
         char test_number[100];
@@ -305,32 +306,34 @@ int main(){
         case 2 : return_value = my_cd(cmd->args[1], cmd->args[0], cwd); break;
         default : return_value = 1;
       }
-    }else{
-      int pipes[2];
-      pipe(pipes);
-      int fork_value = fork();
-      if (fork_value == 0) {
-        close(pipes[0]);
-        // cmd->length +2 because we count the NULL at the end + we will add the name of the
-        // command in front
-        int len = cmd->length + 2;
-        char ** arguments_formatted = malloc (sizeof(char *) * len);
-        if (arguments_formatted != NULL) {
-          arguments_formatted[0] = cmd->name;
-          for (int i = 1; i < len; i++) {
-            arguments_formatted[i] = cmd->args[i - 1];
-          }
-          int res = execvp(cmd->name, arguments_formatted);
-
-          write(pipes[1], &res, sizeof(res));
+    }else if (strcmp(cmd->name, "") != 0){
+      // cmd->length +2 because we count the NULL at the end + we will add the name of the
+      // command in front
+      int len = cmd->length + 2;
+      char ** arguments_formatted = malloc (sizeof(char *) * len);
+      if (arguments_formatted != NULL) {
+        arguments_formatted[0] = cmd->name;
+        for (int i = 1; i < len; i++) {
+          arguments_formatted[i] = cmd->args[i - 1];
         }
-      } else {
-        close(pipes[1]);
-        int tmp;
-        read(pipes[0], &tmp, sizeof(tmp));
-        waitpid(fork_value, NULL, 0);
-        return_value = tmp;
+        arguments_formatted[len-1]=NULL;
       }
+      int fork_value;
+      if ((fork_value = fork()) == 0) {
+        execvp(cmd->name, arguments_formatted);
+        _exit(1);
+      } else {
+        int status;
+        waitpid(fork_value,&status, 0);
+        if(status==256){
+          return_value=1;
+        } else {
+          return_value = 0;
+        }
+      }
+    } else {
+      // La commande vide ne change pas la valeure de "return_value"
+      // Donc rien à faire
     }
     string_delete(prompt);
     free(user_entry);
