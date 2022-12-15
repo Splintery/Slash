@@ -192,6 +192,32 @@ int my_cd(char * dest, char * option, char cwd[PATH_MAX]){
     return 1;
 }
 
+//Les trois fonctions suivantes servent à séparer un chemin contenant un * en 3 parties
+//pour l'implémentation du wildcard (pour l'instant juste le *)
+
+char * split1st(char * src){ //renvoie le chemin éventuel avant le wildcard (peut être nul)
+    if (src[0] == '*'){
+        return "";
+    }else {
+        char *prems = strtok(src, "*");
+        return prems;
+    }
+}
+
+char * split2nd(char * src){//renvoie le morceau (fichier ou répertoire) qui contient le wildcard
+    //on suppose d'office qu'on a bien un * dans le chemin à l'appel de cette fonction
+    char * sec = strtok(src, "*");
+    sec = strtok(NULL, "/");
+    return strcat("*",  sec);
+}
+
+char * split3rd(char * src){ //renvoie la fin du chemin (la suite si *... désigne un répertoire)
+    char * ter = strtok(src, "*");
+    ter = strtok(NULL, "/");
+    ter = strtok(NULL, " "); //à voir si pour la dernière itération on ne trouve pas plus joli
+    return ter;
+}
+
 //Tests temporaires
 void test() {
   //test prompt
