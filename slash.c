@@ -5,6 +5,8 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <unistd.h>
+#include <sys/wait.h>
+#include <sys/types.h>
 // Ce n'est pas nécessaire, mais sympa pour rendre le code plus lisible
 #include <stdbool.h>
 
@@ -278,8 +280,31 @@ int main(){
         default : return_value = 1;
       }
     }else{
-      // TODO : Pour le moment les commandes sont juste recrachées dans le terminal
-      printf("%s\n",user_entry);
+      int pipes[2];
+      pipe(pipes);
+      int fork_value = fork();
+      if (fork_value == 0) {
+        close(pipes[0]);
+        // cmd->length +2 because we count the NULL at the end + we will add the name of the
+        // command in front
+        int len = cmd->length + 2;
+        char ** arguments_formatted = malloc (sizeof(char *) * len);
+        if (arguments_formatted != NULL) {
+          arguments_formatted[0] = cmd->name;
+          for (int i = 1; i < len; i++) {
+            arguments_formatted[i] = cmd->args[i - 1];
+          }
+          int res = execvp(cmd->name, arguments_formatted);
+
+          write(pipes[1], &res, sizeof(res));
+        }
+      } else {
+        close(pipes[1]);
+        int tmp;
+        read(pipes[0], &tmp, sizeof(tmp));
+        waitpid(fork_value, NULL, 0);
+        return_value = tmp;
+      }
     }
     string_delete(prompt);
     free(user_entry);
