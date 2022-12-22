@@ -31,10 +31,14 @@ struct string * prompt_line(int ret, char * path){
   }else {
     string_append(res,"\001\033[91m\002[");
   }
-  char ret_string[10];
-  sprintf(ret_string,"%d",ret);
-  string_append(res,ret_string);
-  string_append(res,"]\001\033[34m\002");
+  if(ret==255){
+    string_append(res,"SIG");
+  }else{
+    char ret_string[10];
+    sprintf(ret_string,"%d",ret);
+    string_append(res,ret_string);
+    string_append(res,"]\001\033[34m\002");
+  }
 
   size_t path_len = strlen(path);
   if((res->length-14)+path_len>28){
@@ -64,8 +68,6 @@ int my_pwd(char * cwd, char * pwd, char * option){
   }
     return 1;
 }
-
-
 
 bool simplifyPath(char *path){
   int clen=strlen(path);
@@ -220,27 +222,64 @@ char * split3rd(char * src){ //renvoie la fin du chemin (la suite si *... désig
     return ter;
 }
 
-//Tests temporaires
-void test() {
-  //test prompt
-  char *test = "test";
-  struct string * ligne = prompt_line(1,test);
-  printf("%s\n",ligne->data);
-  // J'aime beaucoup ce chemin de fichier
-  char *test2 = "troplong/troptroplong/supermegalong/olalalala";
-  struct string * ligne2 = prompt_line(0,test2);
-  printf("%s\n",ligne2->data);
-
-  //test command_parser
-  char * commande = "pwd -L";
-  command *commande_parsee=command_parser(commande);
-  int i=0;
-  printf("name : %s\n",commande_parsee->name);
-    while(commande_parsee->args[i]!=NULL){
-    printf("arg %d : %s\n",i,commande_parsee->args[i]);
-    i++;
-  }
+void exec_cmd(int* return_value,bool* exit,char cwd[PATH_MAX],command* cmd){
+  if(strcmp(cmd->args[0],"exit")==0){
+      *exit=true;
+      if(cmd->length==2){
+        char test_number[100];
+        int exit_value=atoi(cmd->args[1]);
+        sprintf(test_number,"%d",exit_value);
+        if(strcmp(test_number,cmd->args[1])==0) {
+            *return_value=exit_value;
+        } else {
+            *return_value=2;
+        }
+      }else if(cmd->length>2){
+        *return_value=2;
+      }
+    }else if(strcmp(cmd->args[0],"pwd")==0){
+      if((cmd->length==1)||strcmp(cmd->args[1],"-L")==0){
+        *return_value=my_pwd(cwd,getenv("PWD"),"-L");
+      }else{
+        *return_value=my_pwd(cwd,getenv("PWD"),cmd->args[1]);
+      }
+      if(cmd->length>1){
+        *return_value=1;
+      }
+    }else if(strcmp(cmd->args[0],"cd")==0){
+      //TODO implémenter cd
+      switch(cmd->length){
+        case 1 : *return_value = my_cd(getenv("HOME"),"-L",cwd);  break;
+        case 2 : *return_value = my_cd(cmd->args[1], "-L", cwd); break;
+        case 3 : *return_value = my_cd(cmd->args[2], cmd->args[1], cwd); break;
+        default : *return_value = 1;
+      }
+    }else if (strcmp(cmd->args[0], "") != 0){
+      // cmd->length +2 because we count the NULL at the end + we will add the name of the
+      // command in front
+      int fork_value;
+      if ((fork_value = fork()) == 0) {
+        execvp(cmd->args[0], cmd->args);
+        _exit(1);
+      } else {
+        int status;
+        if (waitpid(fork_value,&status, WUNTRACED | WCONTINUED) == -1) {
+          perror("waitpid");
+          *return_value = 1;
+        } else {
+          if (WIFEXITED(status)) {
+            *return_value = WEXITSTATUS(status);
+          } else {
+            *return_value = WSTOPSIG(status);
+          }
+        }
+      }
+    } else {
+      // La commande vide ne change pas la valeur de "return_value"
+      // Donc rien à faire
+    }
 }
+
 int main(){
   char * error_message = "main";
   //test();
@@ -254,8 +293,6 @@ int main(){
   rl_outstream = stderr;
 
   // On récupère le répertoire courrant pour le stocker dans "cwd"
-  // Je ne sais pas encore comment "cd" affectera le répertoire courrant
-  // Mais si "cd" est bien fait, alors "pwd" n'aura qu'a print le contenu de cwd
   if (getcwd(cwd, sizeof(cwd))== NULL) {
     error_message = "getcwd() error";
     return_value = 1;
@@ -263,7 +300,6 @@ int main(){
   }
   do {
     struct string * prompt = prompt_line(return_value, getenv("PWD"));
-    // Pour le moment les commandes sont stockés dans "user_entry"
     // on ajoute au buffer user_entry le résultat de readline
     char * user_entry = readline(prompt->data);
     if(user_entry==NULL){
@@ -274,71 +310,7 @@ int main(){
     }
 
     command *cmd = command_parser(user_entry);
-    if(strcmp(cmd->name,"exit")==0){
-
-      exitB=true;
-      if(cmd->length==1){
-        char test_number[100];
-        int exit_value=atoi(cmd->args[0]);
-        sprintf(test_number,"%d",exit_value);
-        if(strcmp(test_number,cmd->args[0])==0) {
-            return_value=exit_value;
-        } else {
-            return_value=2;
-        }
-      }else if(cmd->length>1){
-        return_value=2;
-      }
-    }else if(strcmp(cmd->name,"pwd")==0){
-      if((cmd->length==0)||strcmp(cmd->args[0],"-L")==0){
-        return_value=my_pwd(cwd,getenv("PWD"),"-L");
-      }else{
-        return_value=my_pwd(cwd,getenv("PWD"),cmd->args[0]);
-      }
-      if(cmd->length>1){
-        return_value=1;
-      }
-    }else if(strcmp(cmd->name,"cd")==0){
-      //TODO implémenter cd
-      switch(cmd->length){
-        case 0 : return_value = my_cd(getenv("HOME"),"-L",cwd);  break;
-        case 1 : return_value = my_cd(cmd->args[0], "-L", cwd); break;
-        case 2 : return_value = my_cd(cmd->args[1], cmd->args[0], cwd); break;
-        default : return_value = 1;
-      }
-    }else if (strcmp(cmd->name, "") != 0){
-      // cmd->length +2 because we count the NULL at the end + we will add the name of the
-      // command in front
-      int len = cmd->length + 2;
-      char ** arguments_formatted = malloc (sizeof(char *) * len);
-      if (arguments_formatted != NULL) {
-        arguments_formatted[0] = cmd->name;
-        for (int i = 1; i < len; i++) {
-          arguments_formatted[i] = cmd->args[i - 1];
-        }
-        arguments_formatted[len-1]=NULL;
-      }
-      int fork_value;
-      if ((fork_value = fork()) == 0) {
-        execvp(cmd->name, arguments_formatted);
-        _exit(1);
-      } else {
-        int status;
-        if (waitpid(fork_value,&status, WUNTRACED | WCONTINUED) == -1) {
-          perror("waitpid");
-          return_value = 1;
-        } else {
-          if (WIFEXITED(status)) {
-            return_value = WEXITSTATUS(status);
-          } else {
-            return_value = WSTOPSIG(status);
-          }
-        }
-      }
-    } else {
-      // La commande vide ne change pas la valeure de "return_value"
-      // Donc rien à faire
-    }
+    exec_cmd(&return_value,&exitB,cwd,cmd);
     string_delete(prompt);
     free(user_entry);
     command_delete(cmd);

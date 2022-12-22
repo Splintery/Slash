@@ -6,20 +6,21 @@
 #define MAX_ARGS_STRLEN 4096
 
 typedef struct command {
-	char * name; // après l'appel à command_parser, name recevra le contenu du premier pointeur de char
-	char ** args; // et args recevra ceux après
+	char ** args; 
 	int arg_capacity;
 	int length;
 } command ;
-// Dans un "switch" plus tard ou pourras donc comparer command->name avec une commande que nous avons
-// Implétmentée puis l'executer avec ce qui se trouve dans args
+// Dans un "switch" plus tard ou pourras donc comparer command->[0] avec une commande que nous avons
+// implémentée puis l'executer avec ce qui se trouve dans args
 
 typedef struct commandList { // Pour implémenter le 1er wildcard et permettre l'exécution de toutes les commandes possibles
     command cmd;
+	char * redirection;
+	int length;
     struct commandList *suivant; // NULL si plus de commande à tenter d'exécuter
 } commandList;
 
-command * command_new(char *str,int max_arg);
+command * command_new(int max_arg);
 
 void command_delete(command * cmd);
 // Détruit la commande et libère la mémoire

@@ -6,11 +6,8 @@
 #define MAX_ARGS_STRLEN 4096
 #define SEPARATOR " \t\n"
 
-command * command_new(char * str,int max_arg){
+command * command_new(int max_arg){
 	command * res = malloc(sizeof(command));
-	int len = strlen(str);
-	res -> name = malloc(sizeof(char) * (len+1));
-	memmove(res->name,str,sizeof(char)*(len+1));
 	res -> args = malloc(max_arg * sizeof(char*));
 	res -> arg_capacity = max_arg;
 	res -> length = 0;
@@ -18,7 +15,6 @@ command * command_new(char * str,int max_arg){
 }
 
 void command_delete(command * cmd) {
-	free(cmd -> name);
 	for(int i = 0; i < cmd->length; i++) {
 			 free(cmd->args[i]);
 	 }
@@ -30,11 +26,14 @@ command * command_parser (char * commande){
   char * tmp = malloc(sizeof(char)*(clen+1));
   memmove(tmp,commande,sizeof(char)*(clen+1));
   char *strToken = strtok(tmp,SEPARATOR);
-	if(strToken==NULL){
+  if(strToken==NULL){
 		strToken="";
-	}
-  command *res = command_new(strToken,MAX_ARGS_NUMBER);
-  int i=0;
+  }
+  command *res = command_new(MAX_ARGS_NUMBER);
+  res->args[0]=malloc(sizeof(char)*(strlen(strToken)+1));
+  memmove(res->args[0],strToken,sizeof(char)*(strlen(strToken)+1));
+  int i=1;
+  res->length=1;
   while((strToken=strtok(NULL,SEPARATOR))!=NULL){
     int len=strlen(strToken);
     res->args[i]=malloc(sizeof(char)*(len+1));
@@ -42,13 +41,12 @@ command * command_parser (char * commande){
 		i++;
     res->length=i;
   }
-  res -> args[res -> length + 1] = (char *) NULL;
+  res -> args[res -> length] = (char *) NULL;
   free(tmp);
   return res;
 }
 
 void command_print(command * cmd) {
-	printf("Command name : %s\n", cmd -> name);
 	for (int i = 0; i < cmd->length; i++) { // temporaire pour que les tests soient lisibles
 		printf("\tArgument[%d] = %s\n", i, cmd -> args[i]);
 	}
@@ -59,7 +57,7 @@ commandList *init_list(){ //crée une liste avec la commande nulle en premier é
     if (l == NULL){
         return NULL;
     } else {
-        l->cmd = *(command_new("", 0));
+        l->cmd = *(command_new(MAX_ARGS_NUMBER));
         l->suivant = NULL;
         return l;
     }
@@ -83,7 +81,8 @@ commandList *addToList(commandList *l,command cmd){ // Pour ajouter une commande
 void freeList(commandList *l){ //Pour détruire notre liste après coup
     while (l != NULL){
         commandList *suivant = l->suivant;
-        free(&(l->cmd));
+        command_delete(&(l->cmd));
+        free(l->redirection);
         free(l);
         l = suivant;
     }
