@@ -7,11 +7,12 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/types.h>
-// Ce n'est pas nécessaire, mais sympa pour rendre le code plus lisible
+#include <dirent.h>
 #include <stdbool.h>
 
 #include "mystring.h"
 #include "command.h"
+#include "wildcards.h"
 
 #define MAX_ARGS_NUMBER 4096
 #define MAX_ARGS_STRLEN 4096
@@ -247,11 +248,19 @@ void exec_cmd(int* return_value,bool* exit,char cwd[PATH_MAX],command* cmd){
         *return_value=1;
       }
     }else if(strcmp(cmd->args[0],"cd")==0){
-      //TODO implémenter cd
       switch(cmd->length){
         case 1 : *return_value = my_cd(getenv("HOME"),"-L",cwd);  break;
         case 2 : *return_value = my_cd(cmd->args[1], "-L", cwd); break;
-        case 3 : *return_value = my_cd(cmd->args[2], cmd->args[1], cwd); break;
+        case 3 : 
+        if(strstr(cmd->args[2],"*")!=NULL){
+          expand_wildcard(cmd,2,cmd->args[2]);
+        }
+        if(cmd->length==3){
+          *return_value = my_cd(cmd->args[2], cmd->args[1], cwd);
+        }else{
+          *return_value = 1;
+        } 
+        break;
         default : *return_value = 1;
       }
     }else if (strcmp(cmd->args[0], "") != 0){
@@ -259,6 +268,12 @@ void exec_cmd(int* return_value,bool* exit,char cwd[PATH_MAX],command* cmd){
       // command in front
       int fork_value;
       if ((fork_value = fork()) == 0) {
+        for(int i = 0;i<cmd->length;i++){
+          if(strstr(cmd->args[i],"*")!=NULL){
+            expand_wildcard(cmd,i,cmd->args[i]);
+          }
+        }
+        
         execvp(cmd->args[0], cmd->args);
         _exit(1);
       } else {
