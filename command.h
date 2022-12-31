@@ -28,6 +28,8 @@ void command_delete(command * cmd);
 command * command_parser (char * commande);
 // crée une struct command à partir d'une chaine de caractères.
 
+void remove_arg(int i,command * cmd);
+
 void command_print(command * cmd);
 
 commandList *init_list();

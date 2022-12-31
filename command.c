@@ -46,6 +46,15 @@ command * command_parser (char * commande){
   return res;
 }
 
+void remove_arg(int i,command * cmd){
+    free(cmd->args[i]);
+    for(int j=i;j<cmd->length-1;j++){
+        cmd->args[j]=cmd->args[j+1];
+    }
+    cmd->length--;
+    cmd->args[cmd->length]=NULL;
+}
+
 void command_print(command * cmd) {
 	for (int i = 0; i < cmd->length; i++) { // temporaire pour que les tests soient lisibles
 		printf("\tArgument[%d] = %s\n", i, cmd -> args[i]);

@@ -17,7 +17,7 @@
 #define MAX_ARGS_NUMBER 4096
 #define MAX_ARGS_STRLEN 4096
 // Pour le moment ce n'est utilisé que pour stocker le chemin courrant
-#define PATH_MAX 64
+#define PATH_MAX 4096
 #define WD_MEMORY 50 // Pour stocker les répertoires courants précédents
 // Si jamais on veux changer la taille du prompt
 #define PROMPT_LENGTH 52
@@ -224,6 +224,16 @@ char * split3rd(char * src){ //renvoie la fin du chemin (la suite si *... désig
 }
 
 void exec_cmd(int* return_value,bool* exit,char cwd[PATH_MAX],command* cmd){
+  //on vérifie la présence de wildcards
+  for(int i = 0;i<cmd->length;i++){
+    int nb =cmd->length;
+    if(strstr(cmd->args[i],"*")!=NULL){
+      expand_wildcard(cmd,i,cmd->args[i]);
+      if(nb!=cmd->length&&strstr(cmd->args[i],"*")!=NULL){
+        remove_arg(i,cmd);
+      }
+    }
+  }
   if(strcmp(cmd->args[0],"exit")==0){
       *exit=true;
       if(cmd->length==2){
@@ -244,36 +254,21 @@ void exec_cmd(int* return_value,bool* exit,char cwd[PATH_MAX],command* cmd){
       }else{
         *return_value=my_pwd(cwd,getenv("PWD"),cmd->args[1]);
       }
-      if(cmd->length>1){
+      if(cmd->length>2){
         *return_value=1;
       }
     }else if(strcmp(cmd->args[0],"cd")==0){
       switch(cmd->length){
         case 1 : *return_value = my_cd(getenv("HOME"),"-L",cwd);  break;
         case 2 : *return_value = my_cd(cmd->args[1], "-L", cwd); break;
-        case 3 : 
-        if(strstr(cmd->args[2],"*")!=NULL){
-          expand_wildcard(cmd,2,cmd->args[2]);
-        }
-        if(cmd->length==3){
-          *return_value = my_cd(cmd->args[2], cmd->args[1], cwd);
-        }else{
-          *return_value = 1;
-        } 
-        break;
+        case 3 : *return_value = my_cd(cmd->args[2], cmd->args[1], cwd); break;
         default : *return_value = 1;
       }
     }else if (strcmp(cmd->args[0], "") != 0){
       // cmd->length +2 because we count the NULL at the end + we will add the name of the
       // command in front
       int fork_value;
-      if ((fork_value = fork()) == 0) {
-        for(int i = 0;i<cmd->length;i++){
-          if(strstr(cmd->args[i],"*")!=NULL){
-            expand_wildcard(cmd,i,cmd->args[i]);
-          }
-        }
-        
+      if ((fork_value = fork()) == 0) {        
         execvp(cmd->args[0], cmd->args);
         _exit(1);
       } else {
@@ -289,9 +284,6 @@ void exec_cmd(int* return_value,bool* exit,char cwd[PATH_MAX],command* cmd){
           }
         }
       }
-    } else {
-      // La commande vide ne change pas la valeur de "return_value"
-      // Donc rien à faire
     }
 }
 
