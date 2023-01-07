@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include <stdbool.h>
+#include <signal.h>
 
 #include "mystring.h"
 #include "command.h"
@@ -223,6 +224,11 @@ char * split3rd(char * src){ //renvoie la fin du chemin (la suite si *... désig
     return ter;
 }
 
+volatile sig_atomic_t sig = 0;
+void handler (int sig){ //pour pouvoir ignorer les signaux SIGINT ET SIGTERM
+    sig = 1;
+}
+
 void exec_cmd(int* return_value,bool* exit,char cwd[PATH_MAX],command* cmd){
   //on vérifie la présence de wildcards
   for(int i = 0;i<cmd->length;i++){
@@ -298,6 +304,18 @@ int main(){
   int return_value = 0;
   char cwd[PATH_MAX];
   rl_outstream = stderr;
+
+  struct sigaction ign;
+  ign.sa_handler = SIG_IGN;
+  ign.sa_flags = 0;
+  sigaction(SIGINT, &ign, NULL);
+  sigaction(SIGTERM, &ign, NULL);
+
+    struct sigaction signal;
+    signal.sa_handler = &handler;
+    signal.sa_flags = 0;
+    sigaction(SIGHUP, &signal, NULL);
+    if (sig == 1) { return_value = 255;}
 
   // On récupère le répertoire courrant pour le stocker dans "cwd"
   if (getcwd(cwd, sizeof(cwd))== NULL) {
