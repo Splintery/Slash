@@ -60,17 +60,64 @@ void replace_wildcard(char* wildcard,DIR* current_dir,int index,char* path,comma
         continue;
       }
       // Allocate memory for the new path
-      
-      char* new_path = malloc(sizeof(char)*(strlen(pathcpy) -(lenSuffixe+1)+ lenEntry + 1)); 
+
+      char* new_path = malloc(sizeof(char)*(strlen(pathcpy) -(lenSuffixe+1)+ lenEntry + 1));
       // Replace the wildcard with the entry name
       memmove(new_path, pathcpy, sizeof(char)*index);
       memmove(&new_path[index], entry->d_name,sizeof(char)*lenEntry);
       memmove(&new_path[index + lenEntry], &pathcpy[index + lenSuffixe + 1],sizeof(char)*( strlen(pathcpy)-index-(lenSuffixe+1)+1));
       expand_wildcard(cmd,argindex,new_path);
       free(new_path);
-    } 
+    }
   }
   free(pathcpy);
+}
+void replace_double_wildcard(char* arg,char* prefixe,command * cmd,int argindex){
+  struct dirent* entry;
+  DIR* current_dir;
+  if(strlen(prefixe)==0){
+    current_dir=opendir(".");
+  }else{
+    current_dir=opendir(prefixe);
+  }
+  while ((entry = readdir(current_dir)) != NULL) {
+    if (strlen(entry->d_name)>0 && entry->d_name[0]=='.' ) {
+      continue;
+    }
+    int lenPrefixe=strlen(prefixe);
+      char *new_path=malloc(sizeof(char)*MAX_ARGS_STRLEN);
+      memmove(new_path,prefixe,sizeof(char)*(lenPrefixe+1));
+      if(lenPrefixe>0){
+        new_path[lenPrefixe]='/';
+        memmove(&new_path[lenPrefixe+1],entry->d_name,sizeof(char)*(strlen(entry->d_name)+1));
+      }else{
+        memmove(&new_path[lenPrefixe],entry->d_name,sizeof(char)*(strlen(entry->d_name)+1));
+      }
+
+      struct stat st;
+      if(lstat(new_path,&st)<0){
+        perror("stat1");
+        exit(1);
+      }
+      int lenNew=strlen(new_path);
+      if(S_ISLNK(st.st_mode)&&strlen(arg)<1){
+        expand_wildcard(cmd,argindex,new_path);
+        free(new_path);
+        continue;
+      }else{
+        if(S_ISDIR(st.st_mode)){
+          replace_double_wildcard(arg,new_path,cmd,argindex);
+        }
+        if(strlen(arg)>0){
+          new_path[lenNew]='/';
+          memmove(&new_path[lenNew+1],arg,sizeof(char)*(strlen(arg)+1));
+
+        }
+        expand_wildcard(cmd,argindex,new_path);
+        free(new_path);
+      }
+  }
+  closedir(current_dir);
 }
 
 void expand_wildcard(command* cmd,int argindex ,char* path) {
@@ -92,7 +139,17 @@ void expand_wildcard(command* cmd,int argindex ,char* path) {
   while (part != NULL) {
     // On vérifie si part contient une wild card, * ou ** et on appelle les fonctions permettant de les remplacer.
     // Sinon, on vérifie si part est un répertoire ou un fichier valide.
-    if (part[0]=='*') {
+    if(strcmp(part,"**")==0){
+      char *pre =malloc(sizeof(char)*MAX_ARGS_STRLEN);
+        pre[0]='\0';
+      if(strlen(path)<=2){
+        replace_double_wildcard(&path[index+2],pre,cmd,argindex);
+      }else{
+        replace_double_wildcard(&path[index+3],pre,cmd,argindex);
+      }
+      free(pre);
+      break;
+    }else if (part[0]=='*') {
       replace_wildcard(part,current_dir,index,path,cmd,argindex);
       break;
     }else{
@@ -147,13 +204,13 @@ void expand_wildcard(command* cmd,int argindex ,char* path) {
         num_paths++;
       }
     }
-  }  
+  }
   closedir(current_dir);
   free(copy);
 
   paths[num_paths] = NULL;
   //On ajoute tous les chemins aux arguments de cmd.
-  if(num_paths > 0){   
+  if(num_paths > 0){
     addArgsAt(argindex+1,cmd,paths,num_paths);
   }
   for(int i=0;i<num_paths;i++){

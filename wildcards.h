@@ -11,6 +11,8 @@ void addArgsAt(int index, command* cmd, char** args, int num_args);
 
 void replace_wildcard(char* wildcard,DIR* current_dir,int index,char* path,command * cmd,int argindex);
 
+void replace_double_wildcard(char* arg,char* prefixe,command * cmd,int argindex);
+
 void expand_wildcard(command* cmd,int argindex ,char* path);
 
 #endif
