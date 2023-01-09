@@ -22,6 +22,7 @@
 #define WD_MEMORY 50 // Pour stocker les répertoires courants précédents
 // Si jamais on veux changer la taille du prompt
 #define PROMPT_LENGTH 52
+struct sigaction ign;
 
 struct string * prompt_line(int ret, char * path){
   if(ret<0||ret>99999999){
@@ -39,8 +40,8 @@ struct string * prompt_line(int ret, char * path){
     char ret_string[10];
     sprintf(ret_string,"%d",ret);
     string_append(res,ret_string);
-    string_append(res,"]\001\033[34m\002");
   }
+  string_append(res,"]\001\033[34m\002");
 
   size_t path_len = strlen(path);
   if((res->length-14)+path_len>28){
@@ -198,37 +199,6 @@ int my_cd(char * dest, char * option, char cwd[PATH_MAX]){
     return 1;
 }
 
-//Les trois fonctions suivantes servent à séparer un chemin contenant un * en 3 parties
-//pour l'implémentation du wildcard (pour l'instant juste le *)
-
-char * split1st(char * src){ //renvoie le chemin éventuel avant le wildcard (peut être nul)
-    if (src[0] == '*'){
-        return "";
-    }else {
-        char *prems = strtok(src, "*");
-        return prems;
-    }
-}
-
-char * split2nd(char * src){//renvoie le morceau (fichier ou répertoire) qui contient le wildcard
-    //on suppose d'office qu'on a bien un * dans le chemin à l'appel de cette fonction
-    char * sec = strtok(src, "*");
-    sec = strtok(NULL, "/");
-    return strcat("*",  sec);
-}
-
-char * split3rd(char * src){ //renvoie la fin du chemin (la suite si *... désigne un répertoire)
-    char * ter = strtok(src, "*");
-    ter = strtok(NULL, "/");
-    ter = strtok(NULL, " "); //à voir si pour la dernière itération on ne trouve pas plus joli
-    return ter;
-}
-
-volatile sig_atomic_t sig = 0;
-void handler (int sig){ //pour pouvoir ignorer les signaux SIGINT ET SIGTERM
-    sig = 1;
-}
-
 void exec_cmd(int* return_value,bool* exit,char cwd[PATH_MAX],command* cmd){
   //on vérifie la présence de wildcards
   for(int i = 0;i<cmd->length;i++){
@@ -271,12 +241,13 @@ void exec_cmd(int* return_value,bool* exit,char cwd[PATH_MAX],command* cmd){
         default : *return_value = 1;
       }
     }else if (strcmp(cmd->args[0], "") != 0){
-      // cmd->length +2 because we count the NULL at the end + we will add the name of the
-      // command in front
       int fork_value;
-      if ((fork_value = fork()) == 0) {        
+      if ((fork_value = fork()) == 0) {   
+        ign.sa_handler = SIG_DFL;
+        sigaction(SIGINT,&ign,NULL);
+        sigaction(SIGTERM,&ign,NULL);
         execvp(cmd->args[0], cmd->args);
-        _exit(1);
+        _exit(127);
       } else {
         int status;
         if (waitpid(fork_value,&status, WUNTRACED | WCONTINUED) == -1) {
@@ -285,17 +256,17 @@ void exec_cmd(int* return_value,bool* exit,char cwd[PATH_MAX],command* cmd){
         } else {
           if (WIFEXITED(status)) {
             *return_value = WEXITSTATUS(status);
-          } else {
-            *return_value = WSTOPSIG(status);
+          } else if (WIFSIGNALED(status)){
+            *return_value = 255;
+          }else{
+            *return_value = 1;
           }
         }
       }
     }
 }
-
 int main(){
   char * error_message = "main";
-  //test();
 
   // On set up des variables pour la suite
   bool exitB = false;
@@ -305,18 +276,7 @@ int main(){
   char cwd[PATH_MAX];
   rl_outstream = stderr;
 
-  struct sigaction ign;
   ign.sa_handler = SIG_IGN;
-  ign.sa_flags = 0;
-  sigaction(SIGINT, &ign, NULL);
-  sigaction(SIGTERM, &ign, NULL);
-
-    struct sigaction signal;
-    signal.sa_handler = &handler;
-    signal.sa_flags = 0;
-    sigaction(SIGHUP, &signal, NULL);
-    if (sig == 1) { return_value = 255;}
-
   // On récupère le répertoire courrant pour le stocker dans "cwd"
   if (getcwd(cwd, sizeof(cwd))== NULL) {
     error_message = "getcwd() error";
@@ -324,6 +284,8 @@ int main(){
     goto error;
   }
   do {
+    sigaction(SIGINT, &ign, NULL);
+    sigaction(SIGTERM, &ign, NULL);
     struct string * prompt = prompt_line(return_value, getenv("PWD"));
     // on ajoute au buffer user_entry le résultat de readline
     char * user_entry = readline(prompt->data);

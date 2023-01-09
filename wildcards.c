@@ -92,9 +92,7 @@ void expand_wildcard(command* cmd,int argindex ,char* path) {
   while (part != NULL) {
     // On vérifie si part contient une wild card, * ou ** et on appelle les fonctions permettant de les remplacer.
     // Sinon, on vérifie si part est un répertoire ou un fichier valide.
-    if (strcmp(part, "**") == 0) {
-      //TODO implémenter la double étoile
-    }else if (part[0]=='*') {
+    if (part[0]=='*') {
       replace_wildcard(part,current_dir,index,path,cmd,argindex);
       break;
     }else{
